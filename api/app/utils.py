@@ -18,11 +18,26 @@ def allowed_file(filename):
     bool
         True if the file is an image, False otherwise.
     """
-    # TODO: Implement the allowed_file function
-    # Current implementation will return True for any file
-    # Check if the file extension of the filename received is in the set of allowed extensions (".png", ".jpg", ".jpeg", ".gif")
+    # Guard: must be a non-empty string
+    if not filename or not isinstance(filename, str):
+        return False
 
-    return True
+    # Extract the basename to ignore any directory components
+    base = os.path.basename(filename)
+    if not base:
+        return False
+
+    # If the basename ends with a dot (e.g. 'dog.'), treat as no extension
+    if base.endswith('.'):
+        return False
+
+    # Split extension and check against allowed set (case-insensitive)
+    _, ext = os.path.splitext(base)
+    if not ext:
+        return False
+
+    allowed_ext = {'.png', '.jpg', '.jpeg', '.gif'}
+    return ext.lower() in allowed_ext
 
 
 async def get_file_hash(file):
@@ -41,13 +56,37 @@ async def get_file_hash(file):
     str
         New filename based in md5 file hash.
     """
-    # TODO: Implement the get_file_hash function
-    # Current implementation will return the original file name.
+    # Read file-like object in chunks to compute md5 without loading everything
+    hasher = hashlib.md5()
 
-    # Read file content and generate md5 hash (Check: https://docs.python.org/3/library/hashlib.html#hashlib.md5)
+    # Some UploadFile implementations expose the underlying file as `.file`
+    fp = getattr(file, "file", None) or file
 
-    # Return file pointer to the beginning
+    # Ensure we start from the beginning
+    try:
+        fp.seek(0)
+    except Exception:
+        pass
 
-    # Add original file extension
+    # Read in chunks
+    chunk_size = 8192
+    while True:
+        chunk = fp.read(chunk_size)
+        if not chunk:
+            break
+        # If chunk is str (unlikely), encode it
+        if isinstance(chunk, str):
+            chunk = chunk.encode()
+        hasher.update(chunk)
 
-    return file.filename
+    # Reset file pointer to beginning for downstream consumers
+    try:
+        fp.seek(0)
+    except Exception:
+        pass
+
+    # Preserve the original extension (lowercased)
+    _, ext = os.path.splitext(getattr(file, 'filename', '') or '')
+    ext = ext.lower() if ext else ''
+
+    return hasher.hexdigest() + ext

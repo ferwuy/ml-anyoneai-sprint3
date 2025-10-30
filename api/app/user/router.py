@@ -21,8 +21,19 @@ async def create_user_registration(
     #  3. If the email doesn't exist, create a new user, see `new_user_register()` function under `services.py`
     #  4. Return the new user object created
 
-    new_user = None
+    # 1. Verify the user email doesn't already exist
+    existing = await validator.verify_email_exist(request.email, database)
+    if existing:
+        # 2. If the email already exists, raise a 400 HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User with this email already exists",
+        )
 
+    # 3. If the email doesn't exist, create a new user
+    new_user = await services.new_user_register(request, database)
+
+    # 4. Return the new user object created
     return new_user
 
 
