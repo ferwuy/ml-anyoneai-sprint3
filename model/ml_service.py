@@ -53,7 +53,10 @@ def predict(image_name):
     decoded_predictions = decode_predictions(predictions, top=1)[0]
     class_name = decoded_predictions[0][1]
     # Ensure the probability is a native Python float (JSON serializable)
-    pred_probability = float(round(decoded_predictions[0][2], 4))
+    # Format to 4 decimal places via string to avoid binary floating-point
+    # representation differences (e.g. 0.9345999956...). This preserves the
+    # exact decimal that tests expect when JSON-serialized.
+    pred_probability = float(f"{decoded_predictions[0][2]:.4f}")
 
     return class_name, pred_probability
 
