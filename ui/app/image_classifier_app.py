@@ -17,19 +17,34 @@ def login(username: str, password: str) -> Optional[str]:
     Returns:
         Optional[str]: token if login is successful, None otherwise
     """
-    # TODO: Implement the login function
-    # Steps to Build the `login` Function:
-    #  1. Construct the API endpoint URL using `API_BASE_URL` and `/login`.
-    #  2. Set up the request headers with `accept: application/json` and
-    #     `Content-Type: application/x-www-form-urlencoded`.
-    #  3. Prepare the data payload with fields: `grant_type`, `username`, `password`,
-    #     `scope`, `client_id`, and `client_secret`.
-    #  4. Use `requests.post()` to send the API request with the URL, headers,
-    #     and data payload.
-    #  5. Check if the response status code is `200`.
-    #  6. If successful, extract the token from the JSON response.
-    #  7. Return the token if login is successful, otherwise return `None`.
-    #  8. Test the function with various inputs.
+    # Build URL and headers
+    url = API_BASE_URL + "/login"
+    headers = {
+        "accept": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+
+    # Payload expected by the API (empty values for client info)
+    data = {
+        "grant_type": "",
+        "username": username,
+        "password": password,
+        "scope": "",
+        "client_id": "",
+        "client_secret": "",
+    }
+
+    try:
+        resp = requests.post(url, headers=headers, data=data)
+    except Exception:
+        return None
+
+    if resp.status_code == 200:
+        try:
+            token = resp.json().get("access_token")
+            return token
+        except Exception:
+            return None
 
     return None
 
@@ -45,14 +60,28 @@ def predict(token: str, uploaded_file: Image) -> requests.Response:
     Returns:
         requests.Response: response from the API
     """
-    # TODO: Implement the predict function
-    # Steps to Build the `predict` Function:
-    #  1. Create a dictionary with the file data. The file should be a
-    #     tuple with the file name and the file content.
-    #  2. Add the token to the headers.
-    #  3. Make a POST request to the predict endpoint.
-    #  4. Return the response.
-    response = None
+    # Build URL and headers
+    url = API_BASE_URL + "/model/predict"
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Extract file name and bytes. Tests expect uploaded_file.getvalue()
+    file_name = getattr(uploaded_file, "name", "uploaded_image")
+
+    try:
+        file_bytes = uploaded_file.getvalue()
+    except Exception:
+        # Fallbacks: try read() from a file-like object or save a PIL Image
+        try:
+            uploaded_file.seek(0)
+            file_bytes = uploaded_file.read()
+        except Exception:
+            from io import BytesIO
+
+            buf = BytesIO()
+            uploaded_file.save(buf, format="PNG")
+            file_bytes = buf.getvalue()
+
+    response = requests.post(url, files={"file": (file_name, file_bytes)}, headers=headers)
 
     return response
 
@@ -73,14 +102,22 @@ def send_feedback(
     Returns:
         requests.Response: _description_
     """
-    # TODO: Implement the send_feedback function
-    # Steps to Build the `send_feedback` Function:
-    # 1. Create a dictionary with the feedback data including feedback, score,
-    #    predicted_class, and image_file_name.
-    # 2. Add the token to the headers.
-    # 3. Make a POST request to the feedback endpoint.
-    # 4. Return the response.
-    response = None
+    url = API_BASE_URL + "/feedback"
+    headers = {"Authorization": f"Bearer {token}"}
+
+    payload = {
+        "feedback": feedback,
+        "score": score,
+        "predicted_class": prediction,
+        "image_file_name": image_file_name,
+    }
+
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+    except Exception:
+        # In case of network issues or other failures, return a dummy Response-like
+        # object is not necessary for tests — they mock requests.post — so just reraise
+        raise
 
     return response
 
