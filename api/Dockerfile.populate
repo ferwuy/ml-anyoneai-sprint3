@@ -13,5 +13,4 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # 3. Copy the content of the current directory to the image
 COPY ./ /src/
 
-# 4. Run the populate_db.py script
-CMD ["python", "populate_db.py"]
+
