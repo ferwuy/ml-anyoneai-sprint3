@@ -28,7 +28,7 @@ services:
       - shared_network
 
   db:
-    image: postgres:latest
+    image: postgres:13
     container_name: postgres_db
     environment:
       POSTGRES_DB: $POSTGRES_DB
