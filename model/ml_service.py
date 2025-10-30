@@ -84,19 +84,31 @@ def classify_process():
         #       code with Redis making use of functions `brpop()` and `set()`.
         # TODO
 
-        job_id, image_name = db.brpop(settings.REDIS_QUEUE)
+        # brpop returns a tuple (queue_name, job_bytes)
+        queue_name, job_bytes = db.brpop(settings.REDIS_QUEUE)
 
-        job_id = job_id.decode("utf-8")
+        # job_bytes is a JSON-encoded bytes object with the job info
+        try:
+            job_str = job_bytes.decode("utf-8")
+            job = json.loads(job_str)
+        except Exception:
+            # If parsing fails, skip this job and continue
+            continue
+
+        job_id = job.get("id")
+        image_name = job.get("image_name")
+
+        # Ensure we have the fields we need
+        if job_id is None or image_name is None:
+            # malformed job, skip
+            continue
 
         class_name, pred_probability = predict(image_name)
 
-        result = {
-            "prediction": class_name,
-            "score": pred_probability
-        }
-        db.set(job_id, json.dumps(result))
+        result = {"prediction": class_name, "score": pred_probability}
 
-        raise NotImplementedError
+        # Store the result using the job id so the API can retrieve it
+        db.set(job_id, json.dumps(result))
 
         # Sleep for a bit
         time.sleep(settings.SERVER_SLEEP)
