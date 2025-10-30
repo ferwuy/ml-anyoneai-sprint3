@@ -52,7 +52,8 @@ def predict(image_name):
     predictions = model.predict(img)
     decoded_predictions = decode_predictions(predictions, top=1)[0]
     class_name = decoded_predictions[0][1]
-    pred_probability = round(decoded_predictions[0][2],4)
+    # Ensure the probability is a native Python float (JSON serializable)
+    pred_probability = float(round(decoded_predictions[0][2], 4))
 
     return class_name, pred_probability
 
